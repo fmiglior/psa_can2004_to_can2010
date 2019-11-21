@@ -1,6 +1,8 @@
+//FMR can2004 to can2010 conversor. BE CAREFUL whe plug something to into the car can network!
+
 #include <SPI.h>
-#include <mcp2515.h>
-#include <avr/wdt.h>
+#include <mcp2515.h> //mcp2515 library
+#include <avr/wdt.h>  //watchdog
 
 
 //variables
@@ -20,7 +22,7 @@ unsigned char trip; //TRIP button value
 unsigned char botao = 0; //external button to change the dashboard pages
 
 //-----------------------------------
-//AREA DE CONFIGURACOES
+//CONFIGS
 bool shiftlight = true; //activate the "shiftlight" function, change some graphics color to red 
 int rpmmax = 5500; //rpm value to active the shiftlight
 bool botaobrilho = false; //to activate the brightness button on the side of the 3008 display
@@ -30,19 +32,19 @@ bool debug = false; //debug mode read values on serial.
 
 
 void setup() {
-wdt_enable(WDTO_8S); //watchdog time set to 8 seconds
+wdt_enable(WDTO_8S); //enable watchdog and set time to 8 seconds
 
   SPI.begin();
   CAN0.reset();
-  CAN0.setBitrate(CAN_125KBPS,MCP_8MHZ);
+  CAN0.setBitrate(CAN_125KBPS,MCP_8MHZ);//adjust your mcp2515 clock speed
   CAN0.setNormalMode();
   CAN1.reset();
-  CAN1.setBitrate(CAN_125KBPS,MCP_8MHZ);
+  CAN1.setBitrate(CAN_125KBPS,MCP_8MHZ);//adjust your mcp2515 clock speed
   CAN1.setNormalMode(); 
 
   pinMode(8, INPUT_PULLUP); //external button to change pages pinout.
   
-  //while (!Serial);
+  
   if (debug == true) {
   Serial.begin(115200);  
   Serial.println("DEBUG MODE!");
@@ -67,12 +69,12 @@ wdt_reset(); //watchdog counting reset
    }
      if (id == 296 && len == 8)  { //ID 128
         
-        canMsgSnd.data[0] = canMsgRcv.data[4];
-        canMsgSnd.data[1] = canMsgRcv.data[6];
-        canMsgSnd.data[2] = canMsgRcv.data[7];
+        canMsgSnd.data[0] = canMsgRcv.data[4]; //basic lights (headlights, turn signal...)
+        canMsgSnd.data[1] = canMsgRcv.data[6]; //gear info, automatic car
+        canMsgSnd.data[2] = canMsgRcv.data[7]; //automatic gearbox signals (snow and sport mode)
         canMsgSnd.data[3] = canMsgRcv.data[3]; //handbrake light need adjust on the code
         canMsgSnd.data[4] = canMsgRcv.data[1];
-        canMsgSnd.data[5] = canMsgRcv.data[0]; //need to adjuste the code fuel light no working
+        canMsgSnd.data[5] = canMsgRcv.data[0]; //need to adjuste the code fuel light not working
         canMsgSnd.data[6] = 0x04; //need to use this value to keep the display ON
         canMsgSnd.data[7] = 0x00;
         canMsgSnd.can_id = 0x128;
@@ -122,7 +124,7 @@ wdt_reset(); //watchdog counting reset
        else if (id == 360 && len == 8) { //ID168 other dashboard lights
         canMsgSnd.data[0] = canMsgRcv.data[0]; 
         canMsgSnd.data[1] = canMsgRcv.data[1]; 
-        canMsgSnd.data[2] = canMsgRcv.data[5];
+        canMsgSnd.data[2] = canMsgRcv.data[5];// need adjust
         canMsgSnd.data[3] = canMsgRcv.data[3]; 
         canMsgSnd.data[4] = canMsgRcv.data[5];// need adjust
         canMsgSnd.data[5] = canMsgRcv.data[5];// need adjust
@@ -147,10 +149,10 @@ wdt_reset(); //watchdog counting reset
      
      else if (id == 54) { //ID036 
                       
-         if (botaobrilho == true && (canMsgRcv.data[3] & 0xFF) >= 32) { //use the external button to adjust the brightness
+         if (botaobrilho == true && (canMsgRcv.data[3] & 0xFF) >= 32) { //use the external button to adjust the brightness. 
         canMsgSnd.data[3] = (bnovo & 0xFF);  
           }
-        else { //use the radio configuration to adjust the brightness
+        else { //use the radio configuration to adjust the brightness, darkmode or headlights off
         canMsgSnd.data[3] = canMsgRcv.data[3];
           }
      
@@ -170,18 +172,18 @@ wdt_reset(); //watchdog counting reset
 
    
     
- else {   //any other code, sended to the display without changes
+ else {   //any other code recived, is send to the display without changes
  CAN1.sendMessage( & canMsgRcv);
   }
       
         if (botaotela == true) { //external button to change the display page
         if (digitalRead(8) == LOW) {
+        botao = botao + 1; //simulate the rotary button on the car, increase 1 to select the next page
 
-        botao = botao + 1;
         canMsgSnd.data[0] = 0x00;
         canMsgSnd.data[1] = 0x00;
         canMsgSnd.data[2] = 0x00;
-        canMsgSnd.data[3] = (botao & 0xFF); //rotary button on the car, increase 1 to select the next page
+        canMsgSnd.data[3] = (botao & 0xFF); 
         canMsgSnd.data[4] = 0x00;
         canMsgSnd.can_id = 0x0A2; 
         canMsgSnd.can_dlc = 5;
@@ -190,8 +192,9 @@ wdt_reset(); //watchdog counting reset
         }
         }
   
- //Shiftligh and personal page dials 
- //VER SE O RADIO MANDA ALGUMA INFO NA CAN 0x2E9 e se manda o 0x1A9
+ //personal page dials and shiftlight
+ //change this part if you have a RCC radio because you can change the personal page dials on the radio -CAN ID 0x2E9
+ //look if you car send the CAN ID 0x1A9, change some parameters on the personal page.
         if (id == 745) { 
         }
         else {
@@ -202,7 +205,7 @@ wdt_reset(); //watchdog counting reset
          else {
         canMsgSnd.data[1] = 0x17; // show the RPM gauge
         }
-        canMsgSnd.data[2] = 0x30; //radio gauge
+        canMsgSnd.data[2] = 0x30; //show the radio gauge
         canMsgSnd.can_id = 0x2E9; 
         canMsgSnd.can_dlc = 3;
         CAN1.sendMessage(&canMsgSnd);
