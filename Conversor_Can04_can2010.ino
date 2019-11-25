@@ -20,10 +20,13 @@ unsigned char bnovo; //display brightness
 int rpm; //car RPM valeu
 unsigned char trip; //TRIP button value
 unsigned char botao = 0; //external button to change the dashboard pages
+unsigned char sport = 0; //indentify the sport mode
+unsigned char esp = 0; //indentify the esp status
 
 //-----------------------------------
 //CONFIGS
-bool shiftlight = true; //activate the "shiftlight" function, change some graphics color to red 
+bool automatic = true; //to car if automatic transmition,disable the shiftlight
+bool shiftlight = false; //activate the "shiftlight" function, change some graphics color to red
 int rpmmax = 5500; //rpm value to active the shiftlight
 bool botaobrilho = false; //to activate the brightness button on the side of the 3008 display
 bool botaotela = true; //activate a external button to change the display page
@@ -65,16 +68,51 @@ wdt_reset(); //watchdog counting reset
       if(id == 182 && shiftlight == true) { //rpm value from the 0x0B6 can code
       rpm = canMsgRcv.data[0] ;
     }
-  
+      if(id == 551 && shiftlight == true) { //ID 227 read the esp and gearbox sport mode
+      esp = (bitRead(canMsgRcv.data[0],4)) ;
+      sport = (bitRead(canMsgRcv.data[0],0)) ;
+    }
    }
      if (id == 296 && len == 8)  { //ID 128
         
         canMsgSnd.data[0] = canMsgRcv.data[4]; //basic lights (headlights, turn signal...)
         canMsgSnd.data[1] = canMsgRcv.data[6]; //gear info, automatic car
         canMsgSnd.data[2] = canMsgRcv.data[7]; //automatic gearbox signals (snow and sport mode)
-        canMsgSnd.data[3] = canMsgRcv.data[3]; //handbrake light need adjust on the code
-        canMsgSnd.data[4] = canMsgRcv.data[1];
-        canMsgSnd.data[5] = canMsgRcv.data[0]; //need to adjuste the code fuel light not working
+        if (bitRead(canMsgRcv.data[0],4) == 1){ //handbrake
+        canMsgSnd.data[3] = 0x02;
+        }
+        else{
+        canMsgSnd.data[3] = 0x00;  
+        }
+        
+        if (esp == 1) { //turn on ESP OFF light
+        canMsgSnd.data[4] = bitSet(canMsgSnd.data[4],2);
+        }
+        else {
+        canMsgSnd.data[4]= bitClear(canMsgSnd.data[4],2);
+        }
+        if (bitRead(canMsgRcv.data[1],3)==1 || bitRead(canMsgRcv.data[1],4)==1 ) { //door open light
+        canMsgSnd.data[4] = bitSet(canMsgSnd.data[4],6);
+        }
+        else {
+        canMsgSnd.data[4]= bitClear(canMsgSnd.data[4],6);
+        }
+       
+        canMsgSnd.data[4] = (canMsgSnd.data[4] & 0xFF); 
+        
+        if (bitRead(canMsgRcv.data[0],4)==1) { //low fuel light
+        canMsgSnd.data[5] = bitSet(canMsgSnd.data[5],7);
+        }
+        else {
+        canMsgSnd.data[5]= bitClear(canMsgSnd.data[5],7);
+        }
+        if (bitRead(canMsgRcv.data[0],1)==1)  { //seatbelt light
+         canMsgSnd.data[5] = bitSet(canMsgSnd.data[5],1);
+        }
+        else {
+        canMsgSnd.data[5]= bitClear(canMsgSnd.data[5],7);
+        }
+        canMsgSnd.data[5] = (canMsgSnd.data[5] & 0xFF) ;
         canMsgSnd.data[6] = 0x04; //need to use this value to keep the display ON
         canMsgSnd.data[7] = 0x00;
         canMsgSnd.can_id = 0x128;
@@ -83,7 +121,7 @@ wdt_reset(); //watchdog counting reset
    
          
      }
-     else if (id == 935) { // maintenance 
+      else if (id == 935) { // maintenance 
         canMsgSnd.data[0] = canMsgRcv.data[0]; //display the maintenance key signal
         canMsgSnd.data[1] = canMsgRcv.data[5]; // Value x255 +
         canMsgSnd.data[2] = canMsgRcv.data[6]; // Value x1 = Number of days till maintenance (FF FF if disabled)
@@ -92,7 +130,6 @@ wdt_reset(); //watchdog counting reset
         canMsgSnd.can_id = 0x3E7; // new id on can2010
         canMsgSnd.can_dlc = 5;
         CAN1.sendMessage(&canMsgSnd);
-        
      }
 
      
@@ -105,7 +142,7 @@ wdt_reset(); //watchdog counting reset
         canMsgSnd.data[5] = 0x00; 
         canMsgSnd.data[6] = 0x00;
         canMsgSnd.data[7] = 0x00;
-        canMsgSnd.can_id = 0x228; //new ID
+        canMsgSnd.can_id = 0x228; //new ID to cruise control and speed limiter
         canMsgSnd.can_dlc = 8;
       CAN1.sendMessage(&canMsgSnd);
         canMsgSnd.data[0] = 0x00; 
@@ -134,6 +171,7 @@ wdt_reset(); //watchdog counting reset
         canMsgSnd.can_dlc = 8;
       CAN1.sendMessage(&canMsgSnd);
      }
+  
      else if (id == 608 && len == 8){ //language and units
         canMsgSnd.data[0] = 0xA1; //this HEX is for PT-BR, need change to another language
         canMsgSnd.data[1] = 0x1C; //this HEX is for C e KM/L, need change to use l/100km ou F 
@@ -147,15 +185,13 @@ wdt_reset(); //watchdog counting reset
         CAN1.sendMessage( & canMsgSnd);      
      }
      
-     else if (id == 54) { //ID036 
-                      
+     else if (id == 54) { //ID036         
          if (botaobrilho == true && (canMsgRcv.data[3] & 0xFF) >= 32) { //use the external button to adjust the brightness. 
         canMsgSnd.data[3] = (bnovo & 0xFF);  
           }
         else { //use the radio configuration to adjust the brightness, darkmode or headlights off
         canMsgSnd.data[3] = canMsgRcv.data[3];
           }
-     
         canMsgSnd.data[0] = canMsgRcv.data[0]; //86 key turned off, 8E key ON
         canMsgSnd.data[1] = canMsgRcv.data[1];
         canMsgSnd.data[2] = canMsgRcv.data[2];
@@ -168,7 +204,12 @@ wdt_reset(); //watchdog counting reset
         CAN1.sendMessage(&canMsgSnd);
      }
 
-          
+     else if( id == 425) { //ID0x1A9
+    
+     }
+     else if( id == 608) { //ID0x260
+    
+     }     
 
    
     
@@ -199,12 +240,15 @@ wdt_reset(); //watchdog counting reset
         }
         else {
         canMsgSnd.data[0] = 0x01;
-         if (shiftlight == true && rpm >= rpmmax){
+         if (automatic == false && shiftlight == true && rpm >= rpmmax){
         canMsgSnd.data[1] = 0x57; // Show the RPM gauge and change the color to RED (shiftlight)
         }
-         else {
-        canMsgSnd.data[1] = 0x17; // show the RPM gauge
+         else if (automatic == true && sport == 1) {
+        canMsgSnd.data[1] = 0x57; // show the RPM gauge and red color
         }
+         else {
+         canMsgSnd.data[1] = 0x17; // show the RPM gauge
+         }
         canMsgSnd.data[2] = 0x30; //show the radio gauge
         canMsgSnd.can_id = 0x2E9; 
         canMsgSnd.can_dlc = 3;
@@ -214,8 +258,8 @@ wdt_reset(); //watchdog counting reset
 
         
  //------------------------------------
- //Read the display can values and sent to the car
- //----------------------------
+ //Read the display can values and send to the car
+ //------------------------------------
  if( CAN1.readMessage( & canMsgRcvT) == MCP2515::ERROR_OK ){;
     idT = canMsgRcvT.can_id;
     lenT = canMsgRcvT.can_dlc;
@@ -224,22 +268,24 @@ wdt_reset(); //watchdog counting reset
    bnovo = (((canMsgRcvT.data[0]) * 0.0625)+32);
    trip = (canMsgRcvT.data[1]);
    }  
-  //To reset the trip holding the side button of the display
  
-   if (trip == 130) {     
-        canMsgSndT.data[0] = canMsgRcvT.data[0];
+  //To reset the trip holding the side button of the display
+    if (trip == 130) { //could generate some problems to reset the trip. 
+                    
+        canMsgSndT.data[0] = 0x00;
         canMsgSndT.data[1] = 0x82;
-        canMsgSndT.data[2] = canMsgRcvT.data[2];
-        canMsgSndT.data[3] = canMsgRcvT.data[3];
-        canMsgSndT.data[4] = canMsgRcvT.data[4];
-        canMsgSndT.data[5] = canMsgRcvT.data[5];
-        canMsgSndT.data[6] = canMsgRcvT.data[6];
-        canMsgSndT.data[7] = canMsgRcvT.data[7];
+        canMsgSndT.data[2] = 0x00; //if 40 turn of the ESP, 80 turn off the park sensor
+        canMsgSndT.data[3] = 0x00;
+        canMsgSndT.data[4] = 0x00;
+        canMsgSndT.data[5] = 0x00;
+        canMsgSndT.data[6] = 0x00;
+        canMsgSndT.data[7] = 0x00;
         canMsgSndT.can_id = 0x217; 
         canMsgSndT.can_dlc = 8;
        CAN0.sendMessage(&canMsgSndT);
        if (debug == true){
        Serial.println("reset trip");
+       
        }
   }
   
