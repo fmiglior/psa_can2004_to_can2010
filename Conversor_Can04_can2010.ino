@@ -206,9 +206,6 @@ wdt_reset(); //watchdog counting reset
 
      else if( id == 425) { //ID0x1A9
     
-     }
-     else if( id == 608) { //ID0x260
-    
      }     
 
    
