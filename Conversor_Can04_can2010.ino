@@ -68,7 +68,7 @@ wdt_reset(); //watchdog counting reset
       if(id == 182 && shiftlight == true) { //rpm value from the 0x0B6 can code
       rpm = canMsgRcv.data[0] ;
     }
-      if(id == 551 && shiftlight == true) { //ID 227 read the esp and gearbox sport mode
+      if(id == 551) { //ID 227 read the esp and gearbox sport mode
       esp = (bitRead(canMsgRcv.data[0],4)) ;
       sport = (bitRead(canMsgRcv.data[0],0)) ;
     }
