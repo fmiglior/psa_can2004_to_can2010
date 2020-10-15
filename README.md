@@ -1,7 +1,7 @@
 # psa_can2004_to_can2010
 
 
-*** be careful this can damage your car, I am not responsible for the use of the codes here ***
+***be careful this can damage your car, I am not responsible for the use of the codes here ***
 
 
 convert psa can2004 code to can2010, to use a peugeot 3008 I-cockpit display in any psa can2004 car.
