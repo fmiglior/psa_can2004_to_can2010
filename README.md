@@ -1,5 +1,10 @@
 # psa_can2004_to_can2010
-convert psa can2004 code to can2010, to use a peugeot 3008 I-cockpit display in any can2004 car.
+
+
+*** be careful this can damage your car, I am not responsible for the use of the codes here ***
+
+
+convert psa can2004 code to can2010, to use a peugeot 3008 I-cockpit display in any psa can2004 car.
 
 
 This project was possible, because they (AUTOWP and LUDWIGVASSEUR) shared all the codes and instructions:
