@@ -1,4 +1,4 @@
-//FMR can2004 to can2010 conversor. BE CAREFUL whe plug something to into the car can network!
+//FMR can2004 to can2010 conversor. BE CAREFUL whe plug something into the car can network!
 
 #include <SPI.h>
 #include <mcp2515.h> //mcp2515 library
@@ -25,7 +25,7 @@ unsigned char esp = 0; //indentify the esp status
 
 //-----------------------------------
 //CONFIGS
-bool automatic = true; //to car if automatic transmition,disable the shiftlight
+bool automatic = true; //turn on if automatic transmition, off disable the "shiftlight"
 bool shiftlight = false; //activate the "shiftlight" function, change some graphics color to red
 int rpmmax = 5500; //rpm value to active the shiftlight
 bool botaobrilho = false; //to activate the brightness button on the side of the 3008 display
@@ -45,7 +45,7 @@ wdt_enable(WDTO_8S); //enable watchdog and set time to 8 seconds
   CAN1.setBitrate(CAN_125KBPS,MCP_8MHZ);//adjust your mcp2515 clock speed
   CAN1.setNormalMode(); 
 
-  pinMode(8, INPUT_PULLUP); //external button to change pages pinout.
+  pinMode(8, INPUT_PULLUP); //external button to change pages pin 8.
   
   
   if (debug == true) {
@@ -65,7 +65,7 @@ wdt_reset(); //watchdog counting reset
    if( CAN0.readMessage( & canMsgRcv) == MCP2515::ERROR_OK ){
     id = canMsgRcv.can_id;
     len = canMsgRcv.can_dlc;
-      if(id == 182 && shiftlight == true) { //rpm value from the 0x0B6 can code
+      if(id == 182 && shiftlight == true) { //rpm value from the 0x0B6 
       rpm = canMsgRcv.data[0] ;
     }
       if(id == 551) { //ID 227 read the esp and gearbox sport mode
@@ -114,7 +114,7 @@ wdt_reset(); //watchdog counting reset
         }
         canMsgSnd.data[5] = (canMsgSnd.data[5] & 0xFF) ;
         canMsgSnd.data[6] = 0x04; //need to use this value to keep the display ON
-        canMsgSnd.data[7] = 0x00;
+        canMsgSnd.data[7] = 0x00; //on some can2010 dashboads, the values change the color of the display like DS4 and C4II
         canMsgSnd.can_id = 0x128;
         canMsgSnd.can_dlc = 8; 
         CAN1.sendMessage(&canMsgSnd);
@@ -127,17 +127,17 @@ wdt_reset(); //watchdog counting reset
         canMsgSnd.data[2] = canMsgRcv.data[6]; // Value x1 = Number of days till maintenance (FF FF if disabled)
         canMsgSnd.data[3] = canMsgRcv.data[3]; // Value x5120 +
         canMsgSnd.data[4] = canMsgRcv.data[4]; // Value x20 = km left till maintenance
-        canMsgSnd.can_id = 0x3E7; // new id on can2010
+        canMsgSnd.can_id = 0x3E7; // new id on can2010 
         canMsgSnd.can_dlc = 5;
         CAN1.sendMessage(&canMsgSnd);
      }
 
      
-     else if (id == 424 && len == 8) { //ID1A8  speed limiter, cruise control and instant trip values
+     else if (id == 424 && len == 8) { //ID1A8  on can 2004 - speed limiter, cruise control and instant trip values
         canMsgSnd.data[0] = canMsgRcv.data[1]; //speed
         canMsgSnd.data[1] = canMsgRcv.data[2]; //speed
         canMsgSnd.data[2] = canMsgRcv.data[0]; //cruise on pause 0x80, 0x88 on, speed limiter on pause 0x40, 0x48 on
-        canMsgSnd.data[3] = 0x80; 
+        canMsgSnd.data[3] = 0x80; //need this value to work
         canMsgSnd.data[4] = 0x00; 
         canMsgSnd.data[5] = 0x00; 
         canMsgSnd.data[6] = 0x00;
@@ -159,22 +159,22 @@ wdt_reset(); //watchdog counting reset
       
      }
        else if (id == 360 && len == 8) { //ID168 other dashboard lights
-        canMsgSnd.data[0] = canMsgRcv.data[0]; 
-        canMsgSnd.data[1] = canMsgRcv.data[1]; 
-        canMsgSnd.data[2] = canMsgRcv.data[5];// need adjust
-        canMsgSnd.data[3] = canMsgRcv.data[3]; 
-        canMsgSnd.data[4] = canMsgRcv.data[5];// need adjust
-        canMsgSnd.data[5] = canMsgRcv.data[5];// need adjust
-        canMsgSnd.data[6] = canMsgRcv.data[6];
-        canMsgSnd.data[7] = canMsgRcv.data[7];
+        canMsgSnd.data[0] = canMsgRcv.data[0]; //same as can2004 - oil and water temp warnings
+        canMsgSnd.data[1] = canMsgRcv.data[1]; //same as can2004 - low tyre pressure warning and auto wiper light 
+        canMsgSnd.data[2] = canMsgRcv.data[5];// seat belt and battery voltage warning 
+        canMsgSnd.data[3] = canMsgRcv.data[3]; //same as can2004 - abs, esp and injection light
+        canMsgSnd.data[4] = canMsgRcv.data[5]; //on can2004 use the aibarg lights, start stop signals
+        canMsgSnd.data[5] = 0x00;// not in use on can2010 or not mapped
+        canMsgSnd.data[6] = 0x00;// not in use on can2010 or not mapped
+        canMsgSnd.data[7] = 0x00;// no similar on can2004, on can2010 hill holder and lane assistent lights
         canMsgSnd.can_id = 0x168;   
         canMsgSnd.can_dlc = 8;
       CAN1.sendMessage(&canMsgSnd);
      }
   
      else if (id == 608 && len == 8){ //language and units
-        canMsgSnd.data[0] = 0xA1; //this HEX is for PT-BR, need change to another language
-        canMsgSnd.data[1] = 0x1C; //this HEX is for C e KM/L, need change to use l/100km ou F 
+        canMsgSnd.data[0] = 0xA1; //this HEX is for PT-BR, need change to another language and to change from KM/L to MPH
+        canMsgSnd.data[1] = 0x1C; //this HEX is for Celsios e Km/L, 0x9C - C and L/100, 
         canMsgSnd.data[2] = 0x97;
         canMsgSnd.data[3] = 0x9B;
         canMsgSnd.data[4] = 0xE0;
@@ -192,11 +192,11 @@ wdt_reset(); //watchdog counting reset
         else { //use the radio configuration to adjust the brightness, darkmode or headlights off
         canMsgSnd.data[3] = canMsgRcv.data[3];
           }
-        canMsgSnd.data[0] = canMsgRcv.data[0]; //86 key turned off, 8E key ON
+        canMsgSnd.data[0] = canMsgRcv.data[0]; 
         canMsgSnd.data[1] = canMsgRcv.data[1];
         canMsgSnd.data[2] = canMsgRcv.data[2];
-        canMsgSnd.data[4] = canMsgRcv.data[4];
-        canMsgSnd.data[5] = canMsgRcv.data[5];
+        canMsgSnd.data[4] = canMsgRcv.data[4]; //CAN power ON (0x01) or OFF (0x02)
+        canMsgSnd.data[5] = canMsgRcv.data[5]; 
         canMsgSnd.data[6] = canMsgRcv.data[6];
         canMsgSnd.data[7] = canMsgRcv.data[7];
         canMsgSnd.can_id = 0x036; 
@@ -204,7 +204,7 @@ wdt_reset(); //watchdog counting reset
         CAN1.sendMessage(&canMsgSnd);
      }
 
-     else if( id == 425) { //ID0x1A9
+     else if( id == 425) { //ID0x1A9 - need some code to enable the functions on the 0x2E9 ----> use 1a9 - 7 - 0x20  
     
      }     
 
@@ -244,9 +244,9 @@ wdt_reset(); //watchdog counting reset
         canMsgSnd.data[1] = 0x57; // show the RPM gauge and red color
         }
          else {
-         canMsgSnd.data[1] = 0x17; // show the RPM gauge
+         canMsgSnd.data[1] = 0x17; // show the RPM gauge 
          }
-        canMsgSnd.data[2] = 0x30; //show the radio gauge
+        canMsgSnd.data[2] = 0x30; //show the radio gauge, 0x29 to water temp or 0x50 to trip
         canMsgSnd.can_id = 0x2E9; 
         canMsgSnd.can_dlc = 3;
         CAN1.sendMessage(&canMsgSnd);
@@ -288,9 +288,18 @@ wdt_reset(); //watchdog counting reset
   
    
  else{
- //CAN0.sendMessage(&canMsgRcvT); //send the dashboard infos to the car
+   //WARNING!
+   //WARNING!!
+   //WARNING!!!
+   //If uncomment, will send the dashboard can messagens to the car. and can change the mileage of the car and generate other cans errors!!
+   
+   
+   //CAN0.sendMessage(&canMsgRcvT); 
+ 
  }
- if (debug == true) {
+
+  //------------ debug area--------------------
+  if (debug == true) {
 Serial.println(rpm);
 
 
