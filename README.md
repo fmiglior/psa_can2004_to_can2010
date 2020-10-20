@@ -17,7 +17,7 @@ http://autowp.github.io/
 Ludwigvasseur did a great job changing his car radio to the Can2010 RCC, you can find all the instrutions and the code to convert the can2004 signal to the can2010.
 https://github.com/ludwigvasseur/arduino-psa-comfort-can-adapter
 
-**What you need:
+# What you need:
 - 1 x Arduino nano, uno or leonardo;
 - Cables;
 - 2 x mcp2515;
